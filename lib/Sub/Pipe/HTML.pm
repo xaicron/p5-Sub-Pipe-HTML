@@ -2,10 +2,10 @@ package Sub::Pipe::HTML;
 
 use strict;
 use warnings;
-use Sub::Pipe;
+use Sub::Pipe qw/joint/;
 use Exporter 'import';
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our @EXPORT = qw/uri html html_line_break replace clickable/;
 
 sub uri {
@@ -36,14 +36,19 @@ sub html_line_break {
 sub clickable {
 	my $config = $_[0] || {};
 	joint {
-		require URI::Find;
+		require URI::Find::Alias;
 		my $str = shift;
-		my $finder = URI::Find->new(
+		my $finder = URI::Find::Alias->new(
 			sub {
-				my ($uri, $orig_uri) = @_;
+				my ($uri, $orig_uri, $alias) = @_;
 				my $target = $config->{target} ? qq( target="$config->{target}") : '';
 				my $rel    = $config->{rel}    ? qq( rel="$config->{rel}") : '';
-				return qq(<a href="$uri"$target$rel>$orig_uri</a>);
+				
+				return sprintf qq(<a href="%s"%s%s>%s</a>), $uri, $target, $rel,
+					$alias                  ? $alias          :
+					defined $config->{text} ? $config->{text} :
+					$orig_uri
+				;
 			},
 		);
 		$finder->find(\$str);
